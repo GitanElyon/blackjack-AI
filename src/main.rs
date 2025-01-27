@@ -1,199 +1,73 @@
-use rand::Rng;
+use std::io;
+use ai::QLearningAI;
 
-#[derive(Debug)]
-enum CardSuit {
-    HEARTS,
-    DIAMONDS,
-    CLUBS,
-    SPADES,
-}
-
-struct Card {
-    suit: CardSuit,
-    value: i32,
-}
+mod ai;
+mod blackjack;
 
 fn main() {
-    let mut deck = build_deck();
+    let mut player_wins = 0;
+    let mut dealer_wins = 0;
+    let mut ties = 0;
 
-    println!("Welcome to blackjack!");
+    let mut ai = QLearningAI::new(100, 2, 0.1, 0.99, 0.1);
 
-    // creating player's hand
-    let mut hand: Vec<Card> = Vec::new();
+    println!("Do you want to (1) train the AI or (2) simulate games with the AI?");
+    let mut choice = String::new();
+    io::stdin().read_line(&mut choice).expect("Failed to read line");
+    let choice = choice.trim().parse::<u32>().expect("Please enter a number");
 
-    // dealing two cards to player
-    hand.push(deal_card(&mut deck));
-    hand.push(deal_card(&mut deck));
+    if choice == 1 {
+        for _ in 0..1000 {
+            let (player_hand_value, dealer_hand_value, result) = blackjack::play_game(&mut || {
+                let state = 0; // Define your state representation
+                let action = ai.choose_action(state);
+                if action == 0 {
+                    "h".to_string()
+                } else {
+                    "s".to_string()
+                }
+            });
 
-    // creating dealer's hand
-    let mut dealer_hand: Vec<Card> = Vec::new();
+            // Update the AI based on the game result
+            let reward = match result.as_str() {
+                "win" => 1.0,
+                "lose" => -1.0,
+                _ => 0.0,
+            };
+            let next_state = 0; // Define your next state representation
+            ai.update_q_table(0, 0, reward, next_state); // Update with actual state and action
 
-    // dealing two cards to dealer
-    dealer_hand.push(deal_card(&mut deck));
-    dealer_hand.push(deal_card(&mut deck));
-
-    println!("Dealer's hand:");
-    display_hand_visual(&dealer_hand, true);
-
-    println!("Your hand: {}", hand_value(&hand));
-    display_hand_visual(&hand, false);
-
-    println!("Would you like to hit or stay? (h/s)");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-    input = input.trim().to_string();
-
-
-    // player's turn
-    while input == "h" {
-        hand.push(deal_card(&mut deck));
-
-        println!("Your hand: {}", hand_value(&hand));
-        display_hand_visual(&hand, false);
-
-        if hand_value(&hand) > 21 {
-            println!("You busted!");
-            break;
-        }
-
-        println!("Would you like to hit or stay? (h/s)");
-        input.clear();
-        std::io::stdin().read_line(&mut input).unwrap();
-        input = input.trim().to_string();
-
-        if input == "s" {
-            break;
-        }
-    }
-
-    // dealer's turn
-    while hand_value(&hand) <= 21 && hand_value(&dealer_hand) < 17 {
-        dealer_hand.push(deal_card(&mut deck));
-    }
-
-    println!("Dealer's hand: {}", hand_value(&dealer_hand));
-    display_hand_visual(&dealer_hand, false);
-
-
-    // determine winner
-    if hand_value(&hand) > 21 {
-        println!("You busted!");
-    } else if hand_value(&dealer_hand) > 21 {
-        println!("Dealer busted! You win!");
-    } else if hand_value(&hand) > hand_value(&dealer_hand) {
-        println!("You win!");
-    } else if hand_value(&hand) < hand_value(&dealer_hand) {
-        println!("Dealer wins!");
-    } else {
-        println!("It's a tie!");
-    }
-}
-
-fn build_deck() -> Vec<Card> {
-    let mut deck: Vec<Card> = Vec::new();
-    for i in 1..14 {
-        deck.push(Card {
-            suit: CardSuit::HEARTS,
-            value: i,
-        });
-        deck.push(Card {
-            suit: CardSuit::DIAMONDS,
-            value: i,
-        });
-        deck.push(Card {
-            suit: CardSuit::CLUBS,
-            value: i,
-        });
-        deck.push(Card {
-            suit: CardSuit::SPADES,
-            value: i,
-        });
-    }
-    deck
-}
-
-fn deal_card(deck: &mut Vec<Card>) -> Card {
-    let index = rand::thread_rng().gen_range(0..deck.len());
-    deck.remove(index)
-}
-
-fn hand_value(hand: &Vec<Card>) -> i32 {
-    let mut value = 0;
-    let mut aces = 0;
-
-    for card in hand {
-        if card.value == 1 {
-            aces += 1;
-        } else if card.value > 10 {
-            value += 10;
-        } else {
-            value += card.value;
-        }
-    }
-
-    for _ in 0..aces {
-        if value + 11 <= 21 {
-            value += 11;
-        } else {
-            value += 1;
-        }
-    }
-
-    value
-}
-
-fn display_hand_visual(hand: &Vec<Card>, hide_first: bool) {
-    let mut card_lines: Vec<Vec<String>> = vec![vec![]; 7];
-
-    if hide_first {
-        card_lines[0].push("┌─────┐".to_string());
-        card_lines[1].push("|░░░░░|".to_string());
-        card_lines[2].push("|░░░░░|".to_string());
-        card_lines[3].push("|░░░░░|".to_string());
-        card_lines[4].push("└─────┘".to_string());
-
-        for card in &hand[1..] {
-            let lines = display_card_visual(card);
-            for (i, line) in lines.iter().enumerate() {
-                card_lines[i].push(line.clone());
+            // Update the win/loss/tie counters based on the game result
+            match result.as_str() {
+                "win" => player_wins += 1,
+                "lose" => dealer_wins += 1,
+                _ => ties += 1,
             }
         }
-    } else {
-        for card in hand {
-            let lines = display_card_visual(card);
-            for (i, line) in lines.iter().enumerate() {
-                card_lines[i].push(line.clone());
+        ai.save_to_csv("src/data.csv").expect("Failed to save Q-table to CSV");
+        println!("Training complete. Player wins: {}, Dealer wins: {}, Ties: {}", player_wins, dealer_wins, ties);
+    } else if choice == 2 {
+        ai.load_from_csv("src/data.csv").expect("Failed to load Q-table from CSV");
+        for _ in 0..1000 {
+            let (player_hand_value, dealer_hand_value, result) = blackjack::play_game(&mut || {
+                let state = 0; // Define your state representation
+                let action = ai.choose_action(state);
+                if action == 0 {
+                    "h".to_string()
+                } else {
+                    "s".to_string()
+                }
+            });
+
+            // Update the win/loss/tie counters based on the game result
+            match result.as_str() {
+                "win" => player_wins += 1,
+                "lose" => dealer_wins += 1,
+                _ => ties += 1,
             }
         }
-    }
-
-    for line in card_lines {
-        println!("{}", line.join(" "));
+        println!("Simulation complete. Player wins: {}, Dealer wins: {}, Ties: {}", player_wins, dealer_wins, ties);
+    } else {
+        println!("Invalid choice");
     }
 }
-
-fn display_card_visual(card: &Card) -> Vec<String> {
-    let suit_visual = match card.suit {
-        CardSuit::HEARTS => "♥",
-        CardSuit::DIAMONDS => "♦",
-        CardSuit::CLUBS => "♣",
-        CardSuit::SPADES => "♠",
-    };
-
-    let value_visual = match card.value {
-        1 => "A",
-        11 => "J",
-        12 => "Q",
-        13 => "K",
-        _ => &card.value.to_string(),
-    };
-
-    vec![
-        "┌─────┐".to_string(),
-        format!("|{:<5}|", value_visual),
-        format!("| {:?} |", suit_visual),
-        format!("|{:>5}|", value_visual),
-        "└─────┘".to_string(),
-    ]
-}
-
