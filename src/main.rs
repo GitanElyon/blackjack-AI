@@ -1,15 +1,19 @@
 use std::io;
 use ai::QLearningAI;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 mod ai;
 mod blackjack;
 
 fn main() {
+    let seed = 42u64;
+    let mut rng = StdRng::seed_from_u64(seed);
     let mut player_wins = 0;
     let mut dealer_wins = 0;
     let mut ties = 0;
 
-    let mut ai = QLearningAI::new(100, 2, 0.1, 0.99, 0.1);
+    let mut ai = QLearningAI::new_with_rng(100, 2, 0.1, 0.99, 0.1, &mut rng);
 
     println!("Do you want to (1) train the AI or (2) simulate games with the AI?");
     let mut choice = String::new();

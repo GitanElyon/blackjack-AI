@@ -2,6 +2,7 @@ use ndarray::Array2;
 use ndarray_rand::RandomExt;
 use rand::distributions::Uniform;
 use rand::Rng;
+use rand::rngs::StdRng;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
 use csv::{ReaderBuilder, WriterBuilder};
@@ -18,6 +19,31 @@ impl QLearningAI {
         let q_table = Array2::random((state_size, action_size), Uniform::new(0.0, 1.0));
         QLearningAI {
             q_table,
+            learning_rate,
+            discount_factor,
+            epsilon,
+        }
+    }
+
+    pub fn new_with_rng(
+        num_states: usize,
+        num_actions: usize,
+        learning_rate: f64,
+        discount_factor: f64,
+        epsilon: f64,
+        rng: &mut StdRng,
+    ) -> Self {
+        // Initialize Q-table or other structures as needed
+        let mut q_table = vec![vec![0.0; num_actions]; num_states];
+        for state in 0..num_states {
+            for action in 0..num_actions {
+                // Example: random initialization
+                q_table[state][action] = rng.gen_range(0.0..1.0);
+            }
+        }
+
+        QLearningAI {
+            q_table: Array2::from_shape_vec((num_states, num_actions), q_table.into_iter().flatten().collect()).unwrap(),
             learning_rate,
             discount_factor,
             epsilon,
