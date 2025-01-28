@@ -121,9 +121,9 @@ pub fn display_card_visual(card: &Card) -> Vec<String> {
     ]
 }
 
-pub fn play_game<F>(mut get_action: F) -> (i32, i32, String)
+pub fn play_game<F>(mut decide_action: F) -> (i32, i32, String)
 where
-    F: FnMut() -> String,
+    F: FnMut(i32, i32) -> String,
 {
     let mut deck = build_deck();
 
@@ -151,7 +151,9 @@ where
 
     // player's turn
     loop {
-        let input = get_action();
+        let player_val = hand_value(&hand);
+        let dealer_val = hand_value(&dealer_hand);
+        let input = decide_action(player_val, dealer_val);
 
         if input == "h" {
             hand.push(deal_card(&mut deck));

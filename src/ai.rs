@@ -68,7 +68,7 @@ impl QLearningAI {
     pub fn save_to_csv(&self, file_path: &str) -> io::Result<()> {
         let file = File::create(file_path)?;
         let mut writer = WriterBuilder::new().from_writer(BufWriter::new(file));
-        for row in self.q_table.genrows() {
+        for row in self.q_table.rows() {
             writer.serialize(row.to_vec())?;
         }
         writer.flush()?;
