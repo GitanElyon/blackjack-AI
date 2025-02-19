@@ -66,7 +66,7 @@ fn main() {
         
         // Simulate 1000 games
         for _ in 0..1000 {
-            let (player_hand_value, dealer_hand_value, result) =
+            let (_, _, result) =
                 blackjack::play_game(|p_val, d_val| {
                     let state = encode_state(p_val, d_val);
                     let action = ai.choose_action(state);

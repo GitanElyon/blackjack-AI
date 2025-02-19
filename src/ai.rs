@@ -18,6 +18,7 @@ pub struct QLearningAI {
 
 impl QLearningAI {
     // Creates a new AI instance with randomly initialized Q-table
+    #[allow(dead_code)]
     pub fn new(state_size: usize, action_size: usize, learning_rate: f64, discount_factor: f64, epsilon: f64) -> Self {
         let q_table = Array2::random((state_size, action_size), Uniform::new(0.0, 1.0));
         QLearningAI {
