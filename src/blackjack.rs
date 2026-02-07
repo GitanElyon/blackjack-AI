@@ -106,7 +106,12 @@ pub fn display_hand_visual(hand: &Vec<Card>, hide_first: bool) {
 
     // Print the complete hand visualization
     for line in card_lines {
-        println!("{}", line.join(" "));
+        if !line.is_empty() {
+             // We don't want to print if we are in silent mode, 
+             // but this function itself doesn't know about silent mode.
+             // I'll update play_game to skip calling this.
+             println!("{}", line.join(" "));
+        }
     }
 }
 
@@ -140,13 +145,15 @@ pub fn display_card_visual(card: &Card) -> Vec<String> {
 }
 
 // Main game logic function that plays one complete game
-pub fn play_game<F>(mut decide_action: F) -> (i32, i32, String)
+pub fn play_game<F>(mut decide_action: F, quiet: bool) -> (i32, i32, String)
 where
     F: FnMut(i32, i32) -> String,
 {
     let mut deck = build_deck();
 
-    println!("Welcome to blackjack!");
+    if !quiet {
+        println!("Welcome to blackjack!");
+    }
 
     // Initialize hands
     let mut hand: Vec<Card> = Vec::new();
@@ -159,10 +166,12 @@ where
     dealer_hand.push(deal_card(&mut deck));
 
     // Display initial hands (dealer's first card hidden)
-    println!("Dealer's hand:");
-    display_hand_visual(&dealer_hand, true);
-    println!("Your hand: {}", hand_value(&hand));
-    display_hand_visual(&hand, false);
+    if !quiet {
+        println!("Dealer's hand:");
+        display_hand_visual(&dealer_hand, true);
+        println!("Your hand: {}", hand_value(&hand));
+        display_hand_visual(&hand, false);
+    }
 
     // Player's turn
     loop {
@@ -173,11 +182,16 @@ where
         if input == "h" {
             // Player hits
             hand.push(deal_card(&mut deck));
-            println!("Your hand: {}", hand_value(&hand));
-            display_hand_visual(&hand, false);
+            
+            if !quiet {
+                println!("Your hand: {}", hand_value(&hand));
+                display_hand_visual(&hand, false);
+            }
 
             if hand_value(&hand) > 21 {
-                println!("You busted!");
+                if !quiet {
+                    println!("You busted!");
+                }
                 return (hand_value(&hand), hand_value(&dealer_hand), "lose".to_string());
             }
         } else if input == "s" {
@@ -190,8 +204,10 @@ where
         dealer_hand.push(deal_card(&mut deck));
     }
 
-    println!("Dealer's hand: {}", hand_value(&dealer_hand));
-    display_hand_visual(&dealer_hand, false);
+    if !quiet {
+        println!("Dealer's hand: {}", hand_value(&dealer_hand));
+        display_hand_visual(&dealer_hand, false);
+    }
 
     // Determine winner based on final hand values
     let result = if hand_value(&hand) > 21 {
